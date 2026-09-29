@@ -2,7 +2,8 @@
 #include "esp_sleep.h"
 #include "ulp_riscv.h"
 #include "ulp_main.h"   // generated header exporting ulp_shared
-#include "esp32s3/ulp_riscv.h"
+#include "ulp_riscv.h"
+#include "ulp/ulp_shared.h"
 
 extern const uint8_t ulp_main_bin_start[] asm("_binary_ulp_main_bin_start");
 extern const uint8_t ulp_main_bin_end[]   asm("_binary_ulp_main_bin_end");

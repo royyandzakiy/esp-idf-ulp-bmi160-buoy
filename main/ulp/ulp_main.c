@@ -1,8 +1,8 @@
-#include <stdint.h>
 #include "ulp_riscv.h"
 #include "ulp_riscv_utils.h"
 #include "ulp_riscv_i2c.h"
 #include "ulp_riscv_gpio.h"
+#include "ulp_shared.h"
 
 /* ---------- Config ---------- */
 #define BMI160_ADDR        0x68
@@ -12,12 +12,6 @@
 #define HITS_TO_WAKE       5       // how many samples must exceed threshold
 
 /* ---------- Shared with CPU (RTC_SLOW_MEM) ---------- */
-typedef struct {
-    uint32_t last_variance;
-    uint32_t hits;
-    uint32_t wake_reason;   // 0 = none, 1 = feeding suspected
-} ulp_shared_t;
-
 ulp_shared_t ulp_shared;   // lives in RTC_SLOW_MEM
 
 /* ---------- Fixed-point integer sqrt (Newton) ---------- */
@@ -31,7 +25,9 @@ static uint32_t isqrt(uint32_t n) {
 /* ---------- Read BMI160 accel (raw int16) ---------- */
 static void read_accel(int16_t *ax, int16_t *ay, int16_t *az) {
     uint8_t buf[6];
-    ulp_riscv_i2c_read_from_device(BMI160_ADDR, REG_ACC_X_L, buf, 6);
+    ulp_riscv_i2c_master_set_slave_addr(BMI160_ADDR);
+    ulp_riscv_i2c_master_set_slave_reg_addr(REG_ACC_X_L);
+    ulp_riscv_i2c_master_read_from_device(buf, 6);
     *ax = (int16_t)((buf[1] << 8) | buf[0]);
     *ay = (int16_t)((buf[3] << 8) | buf[2]);
     *az = (int16_t)((buf[5] << 8) | buf[4]);
