@@ -33,28 +33,28 @@ static void init_ulp_program();
 
 /* ---------- Tiny "inference": 3-class rule-based model ---------- */
 typedef enum {
-    CLASS_CALM = 0,
-    CLASS_FEEDING,
-    CLASS_AGITATED
-} pond_class_t;
+    STATE_CALM = 0,
+    STATE_FISH_ACTIVE,
+    STATE_AGITATED
+} buoy_state_t;
 
-static pond_class_t infer(uint32_t variance, uint32_t hits) {
+static const char *buoy_state_to_str(buoy_state_t s) {
+    switch (s) {
+        case STATE_CALM:     return "CALM";
+        case STATE_FISH_ACTIVE:  return "STATE_FISH_ACTIVE";
+        case STATE_AGITATED: return "AGITATED";
+    }
+    return "UNKNOWN";
+}
+
+static buoy_state_t infer(uint32_t variance, uint32_t hits) {
     // Trivial rule-based "model":
     //   low variance             -> calm
     //   moderate + several hits  -> feeding
     //   extreme variance         -> agitated (bird, splash, storm)
-    if (variance < 300000)                   return CLASS_CALM;
-    if (variance < 1500000 && hits >= 5)     return CLASS_FEEDING;
-    return CLASS_AGITATED;
-}
-
-static const char *class_name(pond_class_t c) {
-    switch (c) {
-        case CLASS_CALM:     return "CALM";
-        case CLASS_FEEDING:  return "FEEDING";
-        case CLASS_AGITATED: return "AGITATED";
-    }
-    return "UNKNOWN";
+    if (variance < 300000)                   return STATE_CALM;
+    if (variance < 1500000 && hits >= 5)     return STATE_FISH_ACTIVE;
+    return STATE_AGITATED;
 }
 
 static void wakeup_gpio_init()
@@ -72,13 +72,7 @@ static void wakeup_gpio_init()
 
 void app_main()
 {
-    /* If user is using USB-serial-jtag then idf monitor needs some time to
-    *  re-connect to the USB port. We wait 1 sec here to allow for it to make the reconnection
-    *  before we print anything. Otherwise the chip will go back to sleep again before the user
-    *  has time to monitor any output.
-    */
     vTaskDelay(pdMS_TO_TICKS(1000));
-
     uint32_t causes = esp_sleep_get_wakeup_causes();
 
     /* not a wakeup from ULP, load the firmware */
@@ -88,18 +82,18 @@ void app_main()
         init_ulp_program();
     }
 
+    /* a wakeup from ULP, run the feeding logic */
     if (causes & BIT(ESP_SLEEP_WAKEUP_ULP)) {
         printf("ULP-RISC-V woke up the main CPU! \n");
 
-        /* ---- Handle the escalation: run inference on shared state ---- */
-        pond_class_t cls = infer(ulp_shared.last_variance, ulp_shared.hits);
+        buoy_state_t state = infer(ulp_shared.last_variance, ulp_shared.hits);
 
         printf("[WAKE] var=%lu hits=%lu -> %s\n",
                (unsigned long)ulp_shared.last_variance,
                (unsigned long)ulp_shared.hits,
-               class_name(cls));
+               buoy_state_to_str(state));
 
-        if (cls == CLASS_FEEDING) {
+        if (state == STATE_FISH_ACTIVE) {
             printf("  -> Dispensing extra feed / logging event\n");
             // future: trigger feeder, send LoRa packet
 
