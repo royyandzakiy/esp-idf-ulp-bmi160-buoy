@@ -1,5 +1,3 @@
-// ulp/ulp_shared.h
-
 #pragma once
 #include <stdint.h>
 
