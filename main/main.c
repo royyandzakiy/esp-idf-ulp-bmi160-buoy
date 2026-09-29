@@ -1,4 +1,4 @@
-// main.c
+// main/main.c
 
 /*
  * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
@@ -31,6 +31,32 @@ extern ulp_shared_t ulp_shared;   // symbol into RTC memory
 
 static void init_ulp_program();
 
+/* ---------- Tiny "inference": 3-class rule-based model ---------- */
+typedef enum {
+    CLASS_CALM = 0,
+    CLASS_FEEDING,
+    CLASS_AGITATED
+} pond_class_t;
+
+static pond_class_t infer(uint32_t variance, uint32_t hits) {
+    // Trivial rule-based "model":
+    //   low variance             -> calm
+    //   moderate + several hits  -> feeding
+    //   extreme variance         -> agitated (bird, splash, storm)
+    if (variance < 300000)                   return CLASS_CALM;
+    if (variance < 1500000 && hits >= 5)     return CLASS_FEEDING;
+    return CLASS_AGITATED;
+}
+
+static const char *class_name(pond_class_t c) {
+    switch (c) {
+        case CLASS_CALM:     return "CALM";
+        case CLASS_FEEDING:  return "FEEDING";
+        case CLASS_AGITATED: return "AGITATED";
+    }
+    return "UNKNOWN";
+}
+
 static void wakeup_gpio_init()
 {
     /* Configure the button GPIO as input, enable wakeup */
@@ -54,6 +80,7 @@ void app_main()
     vTaskDelay(pdMS_TO_TICKS(1000));
 
     uint32_t causes = esp_sleep_get_wakeup_causes();
+
     /* not a wakeup from ULP, load the firmware */
     if (!(causes & BIT(ESP_SLEEP_WAKEUP_ULP))) {
         printf("Not a ULP-RISC-V wakeup, initializing it! \n");
@@ -63,6 +90,28 @@ void app_main()
 
     if (causes & BIT(ESP_SLEEP_WAKEUP_ULP)) {
         printf("ULP-RISC-V woke up the main CPU! \n");
+
+        /* ---- Handle the escalation: run inference on shared state ---- */
+        pond_class_t cls = infer(ulp_shared.last_variance, ulp_shared.hits);
+
+        printf("[WAKE] var=%lu hits=%lu -> %s\n",
+               (unsigned long)ulp_shared.last_variance,
+               (unsigned long)ulp_shared.hits,
+               class_name(cls));
+
+        if (cls == CLASS_FEEDING) {
+            printf("  -> Dispensing extra feed / logging event\n");
+            // future: trigger feeder, send LoRa packet
+
+            /* Feeding confirmed -> reset the persistent hit counter */
+            ulp_shared.hits = 0;
+        }
+
+        /* Clear wake reason so next ULP pass starts clean.
+           NOTE: do NOT reset hits here -- we want it to keep
+           accumulating across wakes until feeding is confirmed
+           or the ULP itself resets it on calm water. */
+        ulp_shared.wake_reason = 0;
     }
 
     /* Go back to sleep, only the ULP Risc-V will run */
