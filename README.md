@@ -1,3 +1,5 @@
-# Bouy Water Sensor
+# Bouy Sensor
 
 ESP32 ULP Risc-V
+
+Low Power
