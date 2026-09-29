@@ -1,0 +1,10 @@
+# Line endings are a repo decision, not a per-machine one. This repo is edited on
+# Windows and built in a Linux container, so everything in the object database is
+# LF and stays that way regardless of anyone's core.autocrlf.
+* text=auto eol=lf
+
+# Binary, never touched.
+*.png  binary
+*.hex  binary
+*.bin  binary
+*.elf  binary

@@ -1,0 +1,65 @@
+# clangd configuration.
+# .clangd - applies repo-wide.
+#
+# No CompilationDatabase key on purpose. clangd resolves per file: it walks up
+# from the source file and checks each parent for compile_commands.json, and
+# for a build/ directory beside it. So apps/<app>/build/compile_commands.json
+# is found on its own, per app, with nothing to configure and nothing to switch
+# when you move between projects.
+#
+# Build the app you are editing, with no -d, and the language server is right:
+#
+#   cd apps/01-blinky && west build -b native_sim/native
+#
+# Two things to know:
+#
+#   1. Only a directory named exactly "build" is probed. A build made with
+#      -d build_native or -d build_conv is NOT found.
+#   2. The test suites under apps/<app>/tests/ are separate Zephyr
+#      applications and the READMEs build them with -d. Those build dirs are
+#      not what the editor follows. It follows the app's own build/.
+#
+# "file not found" on <zephyr/...> means that app has no build/ yet. To see
+# exactly what clangd resolved, including the full command line:
+#
+#   clangd --check=apps/01-blinky/src/main.c
+#
+# Setting CompilationDatabase here, or in a per-app .clangd, would pin one
+# build directory. It works, but it goes stale the moment you build for
+# another board, so a plain west build is the better habit.
+
+CompileFlags:
+  # CompilationDatabase: .
+
+  Remove:
+    - -Werror
+    - -pedantic
+    - -fno-reorder-functions
+    - -fno-defer-pop
+    - -fno-freestanding
+    - --param=min-pagesize=*
+    - -mfp16-format=*
+    - -fno-printf-return-value
+    - -mlongcalls
+    - -fstrict-volatile-bitfields
+    # Add these to handle Xtensa/ESP32 specific flags
+    - -mtext-section-literals
+    - -mlong-calls
+    - -fno-builtin
+    - -g*
+    - -O*
+    - -ffunction-sections
+    - -fdata-sections
+    - -march=*
+    - -mtune=*
+    - -mabi=*
+    - -mcmodel=*
+
+Diagnostics:
+  # Zephyr headers pull in transitively-used symbols by design.
+  UnusedIncludes: None
+  MissingIncludes: None
+
+Index:
+  Background: Build
+  StandardLibrary: true

@@ -1,0 +1,12 @@
+Checks:
+  - 'bugprone-*'
+  - 'modernize-*'
+  - 'performance-*'
+  - 'cppcoreguidelines-*'
+  - '-cppcoreguidelines-pro-bounds-array-to-pointer-decay'
+  - '-modernize-use-trailing-return-type'
+  - '-cppcoreguidelines-avoid-magic-numbers'
+  - '-cppcoreguidelines-pro-type-vararg'
+WarningsAsErrors: '*'
+HeaderFilterRegex: 'src/.*|include/.*'
+FormatStyle: file

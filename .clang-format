@@ -1,0 +1,20 @@
+# Matches what the code in apps/ already does, with one exception: indentation is
+# 4 spaces, not tabs. Zephyr upstream uses tabs. See CLAUDE.md.
+#
+# Nothing has been reformatted to match this yet. To do that:
+#   git ls-files '*.c' '*.h' '*.cpp' '*.hpp' | xargs clang-format -i
+---
+Language: Cpp
+BasedOnStyle: LLVM
+
+IndentWidth: 4
+UseTab: Never
+ColumnLimit: 100
+
+BreakBeforeBraces: Linux
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+
+PointerAlignment: Right
+SortIncludes: false
