@@ -1,4 +1,4 @@
-# Bouy Sensor
+# Buoy Sensor
 
 ESP32 ULP Risc-V
 
